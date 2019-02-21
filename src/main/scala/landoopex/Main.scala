@@ -9,12 +9,13 @@ import org.http4s.implicits._
 import org.http4s.server.Router
 
 import org.http4s.dsl.io
+import org.http4s.client.dsl.{io => clientIo}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
 object Main extends IOApp {
 
-  implicit val ex = Exchange.dummy[IO]
+  implicit val ex = Exchange.apiBased[IO](clientIo, executionContext = global)
 
   def run(args: List[String]): IO[ExitCode] =
     BlazeServerBuilder[IO]

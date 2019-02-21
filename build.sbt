@@ -13,14 +13,15 @@ libraryDependencies ++= Seq(
   "org.typelevel"          %% "cats-core"                 % "1.6.0",
   "org.typelevel"          %% "cats-effect"               % "1.2.0",
   // http4s for rest heavylifting
-  "org.http4s"      %% "http4s-blaze-server" % Http4sVersion,
-  "org.http4s"      %% "http4s-circe"        % Http4sVersion,
-  "org.http4s"      %% "http4s-dsl"          % Http4sVersion,
+  "org.http4s"             %% "http4s-blaze-server"       % Http4sVersion,
+  "org.http4s"             %% "http4s-blaze-client"       % Http4sVersion,
+  "org.http4s"             %% "http4s-circe"              % Http4sVersion,
+  "org.http4s"             %% "http4s-dsl"                % Http4sVersion,
   // circe for json boilerplatte
-  "org.http4s" %% "http4s-circe" % Http4sVersion,
-  "io.circe" %% "circe-generic" % "0.11.1",
+  "org.http4s"             %% "http4s-circe"              % Http4sVersion,
+  "io.circe"               %% "circe-generic"             % "0.11.1",
   // eastico for newtype magic
-  "io.estatico" %% "newtype" % "0.4.2"
+  "io.estatico"            %% "newtype"                   % "0.4.2"
 )
 
 // so that circe and esatico magic work
