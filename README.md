@@ -35,3 +35,9 @@ Content-Length: 48
 
 Provided amount -10.0 is insufficient to convert%
 ```
+
+## Potential improvements
+
+1. don't express as money as Double, that's just asking for trouble
+2. `Exchange` has hardcoded URI to the exchange, should be provided as configuration (`Kleisli`)
+3. What if exchange is dead? We could cache results to potentially stay resilient with cached data (`MonadState`)
