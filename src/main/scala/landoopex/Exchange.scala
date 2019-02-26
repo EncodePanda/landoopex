@@ -30,7 +30,7 @@ object Exchange {
 
   case class ApiResponse(base: String, rates: Map[String, Double])
 
-  def apiBased[F[_]: Applicative: ConcurrentEffect](
+  def apiBased[F[_]: Applicative: ConcurrentEffect: CacheEff](
       dsl: Http4sClientDsl[F],
       executionContext: ExecutionContext
   ): Exchange[F] = new Exchange[F] {
@@ -63,8 +63,24 @@ object Exchange {
       val apiRequest =
         BlazeClientBuilder[F](executionContext).resource.use(_.expect[ApiResponse](url))
 
-      if (amount > 0) handleError(apiRequest.map(toResult))
-      else insufficientAmount(amount).asLeft[Result].pure[F]
+      def getFromCache: F[Option[ExchangeErr[Result]]] =
+        for {
+          maybeExchange <- CacheEff[F].get.map(_.vals.get(CacheEntry(from, to)))
+        } yield maybeExchange.map(exchange => Result(exchange, amount * exchange).asRight)
+
+      def updateCache(result: Result): F[Unit] =
+        CacheEff[F].modify(
+          cache => cache.copy(vals = cache.vals + (CacheEntry(from, to) -> result.exchange))
+        )
+
+      def fetchFresh: F[ExchangeErr[Result]] =
+        for {
+          resultErr <- handleError(apiRequest.map(toResult))
+          _         <- resultErr.fold(_.pure[F], result => updateCache(result))
+        } yield resultErr
+
+      if (amount < 0) insufficientAmount(amount).asLeft[Result].pure[F]
+      else getFromCache >>= (_.fold(fetchFresh)(res => res.pure[F]))
     }
   }
 }
