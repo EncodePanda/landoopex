@@ -12,6 +12,7 @@ libraryDependencies ++= Seq(
   // cats for FP stuff
   "org.typelevel"          %% "cats-core"                 % "1.6.0",
   "org.typelevel"          %% "cats-effect"               % "1.2.0",
+  "org.typelevel"          %% "cats-mtl-core"             % "0.4.0",
   // http4s for rest heavylifting
   "org.http4s"             %% "http4s-blaze-server"       % Http4sVersion,
   "org.http4s"             %% "http4s-blaze-client"       % Http4sVersion,
