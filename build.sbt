@@ -25,7 +25,8 @@ libraryDependencies ++= Seq(
   "io.estatico"            %% "newtype"                   % "0.4.2",
   "ch.qos.logback"         %  "logback-classic"           % "1.2.3",
   // tests
-  "org.scalatest"          %% "scalatest"                 % "3.0.5"        % "test"
+  "org.scalatest"          %% "scalatest"                 % "3.0.5"        % "test",
+  "com.github.tomakehurst" %  "wiremock"                  % "2.21.0"       % "test"
 )
 
 // so that circe and esatico magic work
