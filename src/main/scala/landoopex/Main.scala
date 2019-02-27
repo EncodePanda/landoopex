@@ -16,7 +16,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 object Main extends IOApp {
 
   implicit val cache = new RefMonadState[IO, Cache](Ref.unsafe(Cache.empty))
-  implicit val ex    = Exchange.apiBased[IO](clientIo, executionContext = global)
+  implicit val ex    = new ApiBasedExchange[IO](clientIo, executionContext = global)
 
   def run(args: List[String]): IO[ExitCode] =
     BlazeServerBuilder[IO]
