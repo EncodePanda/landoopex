@@ -47,10 +47,26 @@ class ApiBasedExchangeSpec extends FunSpec with Matchers {
       // then
       result.runA(Cache.empty).value shouldBe (error).asLeft
     }
+
+    it("should return result from external service if not in cache and external service returns a result") {
+      // given
+      val exchangeRate                            = 2.5
+      implicit val external: ExternalService[Eff] = alwaysSucceeds(exchangeRate)
+      val exchange                                = new ApiBasedExchange[Eff]
+      val amount                                  = 10
+      // when
+      val result = exchange.convert(amount, EUR, USD)
+      // then
+      result.runA(Cache.empty).value shouldBe (Result(exchangeRate, amount * exchangeRate)).asRight
+    }
   }
 
   private def alwaysFail(err: ExchangeError): ExternalService[Eff] = {
     case _ => err.asLeft.pure[Eff]
+  }
+
+  private def alwaysSucceeds(exchangeRate: Double): ExternalService[Eff] = {
+    case (amount, from, to) => Result(exchangeRate, amount * exchangeRate).asRight.pure[Eff]
   }
 
   private val USD = Currency("USD")
