@@ -5,6 +5,7 @@ import cats.effect._
 import cats._, cats.data._, cats.implicits._
 
 import org.http4s.client.dsl.{io => clientIo}
+import org.http4s.client.UnexpectedStatus
 import java.net.ConnectException
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -45,6 +46,19 @@ class ERAExternalServiceIntegrationTest extends FunSpec with Matchers with Befor
       val ExchangeNotPossible(throwable) = service.fetch(amount, from, to).unsafeRunSync.left.get
       throwable shouldBe a[ConnectException]
       throwable.getMessage shouldBe ("Connection refused")
+    }
+
+    it("should return an error if service lacks endpoint") {
+      // given
+      val amount = Amount(BigDecimal("10.0"))
+      val from   = Currency("EUR")
+      val to     = Currency("USD")
+
+      // when
+      val service = new ERAExternalService[IO](url)(clientIo, executionContext = global)
+      // then
+      val ExchangeNotPossible(throwable) = service.fetch(amount, from, to).unsafeRunSync.left.get
+      throwable shouldBe a[UnexpectedStatus]
     }
 
     it("should return currency rate if it exists") {
