@@ -14,20 +14,25 @@ import io.circe.generic.auto._
 import io.circe.syntax._
 import scala.concurrent.ExecutionContext
 
-class ApiBasedExchange[F[_]: Applicative: ConcurrentEffect: CacheEff](
+case class ApiResponse(base: String, rates: Map[String, Double])
+
+trait ExternalService[F[_]] {
+  def fetch(amount: Double, from: Currency, to: Currency): F[ExchangeErr[Result]]
+}
+
+object ExternalService {
+  def apply[F[_]: ExternalService]: ExternalService[F] = implicitly[ExternalService[F]]
+}
+
+class ERAExternalService[F[_]: ConcurrentEffect](url: Currency => String)(
     dsl: Http4sClientDsl[F],
     executionContext: ExecutionContext
-) extends Exchange[F] {
+) extends ExternalService[F] {
 
-  case class ApiResponse(base: String, rates: Map[String, Double])
+  import dsl._
+  implicit val codec = jsonOf[F, ApiResponse]
 
-  def convert(
-      amount: Double,
-      from: Currency,
-      to: Currency
-  ): F[ExchangeErr[Result]] = {
-    import dsl._
-    implicit val codec = jsonOf[F, ApiResponse]
+  def fetch(amount: Double, from: Currency, to: Currency): F[ExchangeErr[Result]] = {
 
     val toResult: ApiResponse => ExchangeErr[Result] = {
       case ApiResponse(base, rates) if (rates.contains(to.value)) =>
@@ -45,10 +50,21 @@ class ApiBasedExchange[F[_]: Applicative: ConcurrentEffect: CacheEff](
             case err                          => exchangeNotPossible.asLeft[Result]
           }, identity))
 
-    val url = s"https://api.exchangeratesapi.io/latest?base=${from.value}"
-
     val apiRequest =
-      BlazeClientBuilder[F](executionContext).resource.use(_.expect[ApiResponse](url))
+      BlazeClientBuilder[F](executionContext).resource.use(_.expect[ApiResponse](url(from)))
+
+    handleError(apiRequest.map(toResult))
+
+  }
+}
+
+class ApiBasedExchange[F[_]: Monad: CacheEff: ExternalService] extends Exchange[F] {
+
+  def convert(
+      amount: Double,
+      from: Currency,
+      to: Currency
+  ): F[ExchangeErr[Result]] = {
 
     def getFromCache: F[Option[ExchangeErr[Result]]] =
       for {
@@ -62,7 +78,7 @@ class ApiBasedExchange[F[_]: Applicative: ConcurrentEffect: CacheEff](
 
     def fetchFresh: F[ExchangeErr[Result]] =
       for {
-        resultErr <- handleError(apiRequest.map(toResult))
+        resultErr <- ExternalService[F].fetch(amount, from, to)
         _         <- resultErr.fold(_.pure[F], result => updateCache(result))
       } yield resultErr
 
