@@ -23,6 +23,7 @@ libraryDependencies ++= Seq(
   "io.circe"               %% "circe-generic"             % "0.11.1",
   // eastico for newtype magic
   "io.estatico"            %% "newtype"                   % "0.4.2",
+  "ch.qos.logback"         %  "logback-classic"           % "1.2.3",
   // tests
   "org.scalatest"          %% "scalatest"                 % "3.0.5"        % "test"
 )
