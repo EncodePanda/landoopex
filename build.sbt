@@ -22,7 +22,9 @@ libraryDependencies ++= Seq(
   "org.http4s"             %% "http4s-circe"              % Http4sVersion,
   "io.circe"               %% "circe-generic"             % "0.11.1",
   // eastico for newtype magic
-  "io.estatico"            %% "newtype"                   % "0.4.2"
+  "io.estatico"            %% "newtype"                   % "0.4.2",
+  // tests
+  "org.scalatest"          %% "scalatest"                 % "3.0.5"        % "test"
 )
 
 // so that circe and esatico magic work
