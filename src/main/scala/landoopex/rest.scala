@@ -24,34 +24,36 @@ object rest {
   private case class ExchangeRequest(
       fromCurrency: String,
       toCurrency: String,
-      amount: Double
+      amount: BigDecimal
   )
   private case class ExchangeResponse(
-      exchange: Double,
-      amount: Double,
-      original: Double
+      exchange: BigDecimal,
+      amount: BigDecimal,
+      original: BigDecimal
   )
 
   private implicit val show: Show[ExchangeError] = new Show[ExchangeError] {
     def show(error: ExchangeError): String = error match {
       case CurrencyNotAvailable(currency) =>
         s"Requested currency $currency does not exist"
-      case ExchangeNotPossible => "Exchange is not possible right now"
+      case ExchangeNotPossible(th) => s"Exchange is not possible right now: ${th.getMessage}"
       case InsufficientAmount(amount) =>
         s"Provided amount $amount is insufficient to convert"
     }
   }
 
+  private def roundOutput(bd: BigDecimal): BigDecimal =
+    bd.setScale(4, BigDecimal.RoundingMode.HALF_EVEN)
+
   def routes[F[_]: Monad: Effect: Exchange](dsl: Http4sDsl[F]) = {
     import dsl._
-
     HttpRoutes
       .of[F] {
         case rawReq @ POST -> Root / "api" / "convert" =>
           for {
             req <- rawReq.as[ExchangeRequest]
             resultErr <- Exchange[F].convert(
-                          req.amount,
+                          Amount(req.amount),
                           Currency(req.fromCurrency),
                           Currency(req.toCurrency)
                         )
@@ -60,13 +62,12 @@ object rest {
                      result =>
                        Ok(
                          ExchangeResponse(
-                           exchange = result.exchange,
-                           amount = result.amount,
-                           original = req.amount
+                           exchange = roundOutput(result.exchange.value),
+                           amount = roundOutput(result.amount.value),
+                           original = roundOutput(req.amount)
                          ).asJson
                        )
                    )
-
           } yield (resp)
       }
       .orNotFound

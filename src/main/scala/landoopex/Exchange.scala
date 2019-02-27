@@ -4,11 +4,11 @@ import cats._, cats.data._, cats.implicits._
 import cats.effect._
 import types._, errors._
 
-case class Result(exchange: Double, amount: Double)
+case class Result(exchange: Rate, amount: Amount)
 
 trait Exchange[F[_]] {
   def convert(
-      amount: Double,
+      amount: Amount,
       from: Currency,
       to: Currency
   ): F[ExchangeErr[Result]]

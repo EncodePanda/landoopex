@@ -14,10 +14,10 @@ import io.circe.generic.auto._
 import io.circe.syntax._
 import scala.concurrent.ExecutionContext
 
-case class ApiResponse(base: String, rates: Map[String, Double])
+case class ApiResponse(base: String, rates: Map[String, BigDecimal])
 
 trait ExternalService[F[_]] {
-  def fetch(amount: Double, from: Currency, to: Currency): F[ExchangeErr[Result]]
+  def fetch(amount: Amount, from: Currency, to: Currency): F[ExchangeErr[Result]]
 }
 
 object ExternalService {
@@ -32,11 +32,11 @@ class ERAExternalService[F[_]: ConcurrentEffect](url: Currency => String)(
   import dsl._
   implicit val codec = jsonOf[F, ApiResponse]
 
-  def fetch(amount: Double, from: Currency, to: Currency): F[ExchangeErr[Result]] = {
+  def fetch(amount: Amount, from: Currency, to: Currency): F[ExchangeErr[Result]] = {
 
     val toResult: ApiResponse => ExchangeErr[Result] = {
       case ApiResponse(base, rates) if (rates.contains(to.value)) =>
-        val rate = rates(to.value)
+        val rate = Rate(rates(to.value))
         Result(rate, amount * rate).asRight[ExchangeError]
       case _ => currencyNotAvailable(from).asLeft[Result]
     }
@@ -47,7 +47,7 @@ class ERAExternalService[F[_]: ConcurrentEffect](url: Currency => String)(
           .attempt(result)
           .map(_.fold({
             case UnexpectedStatus(BadRequest) => currencyNotAvailable(from).asLeft[Result]
-            case err                          => exchangeNotPossible.asLeft[Result]
+            case err                          => exchangeNotPossible(err).asLeft[Result]
           }, identity))
 
     val apiRequest =
@@ -61,7 +61,7 @@ class ERAExternalService[F[_]: ConcurrentEffect](url: Currency => String)(
 class ApiBasedExchange[F[_]: Monad: CacheEff: ExternalService] extends Exchange[F] {
 
   def convert(
-      amount: Double,
+      amount: Amount,
       from: Currency,
       to: Currency
   ): F[ExchangeErr[Result]] = {
@@ -82,7 +82,7 @@ class ApiBasedExchange[F[_]: Monad: CacheEff: ExternalService] extends Exchange[
         _         <- resultErr.fold(_.pure[F], result => updateCache(result))
       } yield resultErr
 
-    if (amount < 0) insufficientAmount(amount).asLeft[Result].pure[F]
+    if (amount < Amount.ZERO) insufficientAmount(amount).asLeft[Result].pure[F]
     else getFromCache >>= (_.fold(fetchFresh)(res => res.pure[F]))
   }
 
